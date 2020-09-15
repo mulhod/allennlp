@@ -269,6 +269,7 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
+        postpone_cleanup: bool = True,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -293,7 +294,9 @@ class Model(torch.nn.Module, Registrable):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab=vocab, params=model_params)
+        model = Model.from_params(
+            vocab=vocab, params=model_params, postpone_cleanup=postpone_cleanup
+        )
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
@@ -350,6 +353,7 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
+        postpone_cleanup: bool = True,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -370,6 +374,9 @@ class Model(torch.nn.Module, Registrable):
         cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
+        postpone_cleanup : `bool`, optional (default=`True`)
+            Postpone cleanup of extracted temporary directory in `load_archive` until
+            exit
 
         # Returns
 
@@ -393,7 +400,9 @@ class Model(torch.nn.Module, Registrable):
             # If we really need to change this, we would need to implement a recursive
             # get_model_class method, that recurses whenever it finds a from_archive model type.
             model_class = Model
-        return model_class._load(config, serialization_dir, weights_file, cuda_device)
+        return model_class._load(
+            config, serialization_dir, weights_file, cuda_device, postpone_cleanup
+        )
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
@@ -425,7 +434,9 @@ class Model(torch.nn.Module, Registrable):
                 )
 
     @classmethod
-    def from_archive(cls, archive_file: str, vocab: Vocabulary = None) -> "Model":
+    def from_archive(
+        cls, archive_file: str, vocab: Vocabulary = None, postpone_cleanup: bool = True
+    ) -> "Model":
         """
         Loads a model from an archive file.  This basically just calls
         `return archival.load_archive(archive_file).model`.  It exists as a method here for
@@ -437,7 +448,7 @@ class Model(torch.nn.Module, Registrable):
         """
         from allennlp.models.archival import load_archive  # here to avoid circular imports
 
-        model = load_archive(archive_file).model
+        model = load_archive(archive_file, postpone_cleanup=postpone_cleanup).model
         if vocab:
             model.vocab.extend_from_vocab(vocab)
             model.extend_embedder_vocab()

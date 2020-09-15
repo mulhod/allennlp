@@ -238,6 +238,7 @@ class Predictor(Registrable):
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
         import_plugins: bool = True,
+        postpone_cleanup: bool = True,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -265,6 +266,8 @@ class Predictor(Registrable):
             This comes with additional overhead, but means you don't need to explicitly
             import the modules that your predictor depends on as long as those modules
             can be found by `allennlp.common.plugins.import_plugins()`.
+        postpone_cleanup : `bool`, optional (default=`True`)
+            Postpone cleanup of extracted temporary directory until exit
 
         # Returns
 
@@ -274,7 +277,7 @@ class Predictor(Registrable):
         if import_plugins:
             plugins.import_plugins()
         return Predictor.from_archive(
-            load_archive(archive_path, cuda_device=cuda_device),
+            load_archive(archive_path, cuda_device=cuda_device, postpone_cleanup=postpone_cleanup),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
             frozen=frozen,

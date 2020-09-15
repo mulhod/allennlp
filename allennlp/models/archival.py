@@ -134,6 +134,7 @@ def load_archive(
     cuda_device: int = -1,
     overrides: str = "",
     weights_file: str = None,
+    postpone_cleanup: bool = True,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
@@ -149,6 +150,8 @@ def load_archive(
         JSON overrides to apply to the unarchived `Params` object.
     weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
+    postpone_cleanup : `bool`, optional (default=`True`)
+        Postpone cleanup of extracted temporary directory until exit
     """
     # redirect to the cache, if necessary
     resolved_archive_file = cached_path(archive_file)
@@ -158,6 +161,7 @@ def load_archive(
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
+    tempdir = None
     if os.path.isdir(resolved_archive_file):
         serialization_dir = resolved_archive_file
     else:
@@ -166,32 +170,41 @@ def load_archive(
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
         with tarfile.open(resolved_archive_file, "r:gz") as archive:
             archive.extractall(tempdir)
-        # Postpone cleanup until exit in case the unarchived contents are needed outside
-        # this function.
-        atexit.register(_cleanup_archive_dir, tempdir)
+        if postpone_cleanup:
+            # Postpone cleanup until exit in case the unarchived contents are needed outside
+            # this function.
+            atexit.register(_cleanup_archive_dir, tempdir)
 
         serialization_dir = tempdir
 
-    # Load config
-    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+    try:
 
-    if weights_file:
-        weights_path = weights_file
-    else:
-        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
-        # Fallback for serialization directories.
-        if not os.path.exists(weights_path):
-            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
 
-    # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(
-        config.duplicate(),
-        weights_file=weights_path,
-        serialization_dir=serialization_dir,
-        cuda_device=cuda_device,
-    )
+        if weights_file:
+            weights_path = weights_file
+        else:
+            weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+            # Fallback for serialization directories.
+            if not os.path.exists(weights_path):
+                weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
 
-    return Archive(model=model, config=config)
+        # Instantiate model. Use a duplicate of the config, as it will get consumed.
+        model = Model.load(
+            config.duplicate(),
+            weights_file=weights_path,
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            postpone_cleanup=postpone_cleanup,
+        )
+
+        return Archive(model=model, config=config)
+
+    finally:
+
+        if tempdir is not None and not postpone_cleanup:
+            _cleanup_archive_dir(tempdir)
 
 
 def _cleanup_archive_dir(path: str):
