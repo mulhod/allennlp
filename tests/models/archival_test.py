@@ -1,4 +1,6 @@
 import copy
+import logging
+import os
 
 import torch
 
@@ -6,6 +8,7 @@ from allennlp.commands.train import train_model
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import archive_model, load_archive
+from allennlp.predictors import Predictor
 
 
 def assert_models_equal(model, model2):
@@ -115,3 +118,29 @@ class ArchivalTest(AllenNlpTestCase):
                 # In this case, the parameters are definitely different, no need for the above
                 # check.
                 pass
+
+    def test_load_from_archive_model_cleanup_temp_dir_asap(self, caplog):
+        serialization_dir = self.FIXTURES_ROOT / "basic_classifier" / "from_archive_serialization"
+        archive_path = serialization_dir / "model.tar.gz"
+        with caplog.at_level(logging.INFO, logger="allennlp.models.archival"):
+            _ = load_archive(archive_path, postpone_cleanup=False)
+            extract_archive_messages = []
+            for record in caplog.records:
+                if record.message.startswith("extracting archive file"):
+                    extract_archive_messages.append(record.message)
+            assert len(extract_archive_messages) > 0
+            for extract_archive_message in extract_archive_messages:
+                assert os.path.exists(extract_archive_message.split()[-1]) is False
+
+    def test_load_predictor_from_path_cleanup_temp_dir_asap(self, caplog):
+        serialization_dir = self.FIXTURES_ROOT / "basic_classifier" / "from_archive_serialization"
+        archive_path = serialization_dir / "model.tar.gz"
+        with caplog.at_level(logging.INFO, logger="allennlp.models.archival"):
+            _ = Predictor.from_path(archive_path, postpone_cleanup=False)
+            extract_archive_messages = []
+            for record in caplog.records:
+                if record.message.startswith("extracting archive file"):
+                    extract_archive_messages.append(record.message)
+            assert len(extract_archive_messages) > 0
+            for extract_archive_message in extract_archive_messages:
+                assert os.path.exists(extract_archive_message.split()[-1]) is False
