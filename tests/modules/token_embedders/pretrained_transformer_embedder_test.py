@@ -1,6 +1,9 @@
 import math
 import pytest
+from shutil import rmtree
+from tempfile import mkdtemp
 import torch
+from unittest import mock
 
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
@@ -241,3 +244,22 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         token_embedder(token_ids, mask)
+
+    def test_from_pretrained_kwargs_local_files_only_missing_from_cache(self):
+        tempdir = mkdtemp()
+        try:
+            with pytest.raises(ValueError) as execinfo:
+                PretrainedTransformerEmbedder(
+                    "bert-base-uncased",
+                    from_pretrained_kwargs={
+                        "cache_dir": tempdir,
+                        "local_files_only": True,
+                    }
+                )
+            assert str(execinfo.value) == \
+                ("Cannot find the requested files in the cached path and "
+                 "outgoing traffic has been disabled. To enable model "
+                 "look-ups and downloads online, set 'local_files_only' "
+                 "to False.")
+        finally:
+            rmtree(tempdir)
