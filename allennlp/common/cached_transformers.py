@@ -47,6 +47,8 @@ def get(
     global _model_cache
     spec = TransformerSpec(model_name, override_weights_file, override_weights_strip_prefix)
     transformer = _model_cache.get(spec, None)
+    if from_pretrained_kwargs is None:
+        from_pretrained_kwargs = {}
     if transformer is None:
         if override_weights_file is not None:
             from allennlp.common.file_utils import cached_path
