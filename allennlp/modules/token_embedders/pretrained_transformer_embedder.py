@@ -66,8 +66,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         from allennlp.common import cached_transformers
 
         self.transformer_model = cached_transformers.get(
-            model_name, True, override_weights_file, override_weights_strip_prefix,
-            from_pretrained_kwargs
+            model_name,
+            True,
+            override_weights_file,
+            override_weights_strip_prefix,
+            from_pretrained_kwargs,
         )
 
         if gradient_checkpointing is not None:

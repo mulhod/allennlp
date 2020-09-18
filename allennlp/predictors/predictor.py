@@ -279,9 +279,7 @@ class Predictor(Registrable):
             plugins.import_plugins()
         return Predictor.from_archive(
             load_archive(
-                archive_path,
-                cuda_device=cuda_device,
-                from_pretrained_kwargs=from_pretrained_kwargs
+                archive_path, cuda_device=cuda_device, from_pretrained_kwargs=from_pretrained_kwargs
             ),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,

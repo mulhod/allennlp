@@ -441,10 +441,10 @@ class Model(torch.nn.Module, Registrable):
 
     @classmethod
     def from_archive(
-            cls,
-            archive_file: str,
-            vocab: Vocabulary = None,
-            from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
+        cls,
+        archive_file: str,
+        vocab: Vocabulary = None,
+        from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
     ) -> "Model":
         """
         Loads a model from an archive file.  This basically just calls

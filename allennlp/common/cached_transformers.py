@@ -79,9 +79,8 @@ def get(
                 override_weights = {strip_prefix(k): override_weights[k] for k in valid_keys}
 
             transformer = AutoModel.from_pretrained(
-                model_name,
-                state_dict=override_weights,
-                **from_pretrained_kwargs)
+                model_name, state_dict=override_weights, **from_pretrained_kwargs
+            )
         else:
             transformer = AutoModel.from_pretrained(model_name, **from_pretrained_kwargs)
         _model_cache[spec] = transformer
