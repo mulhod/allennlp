@@ -1,5 +1,5 @@
 import logging
-from typing import NamedTuple, Optional, Dict, Tuple
+from typing import NamedTuple, Optional, Dict, Tuple, Any
 import transformers
 from transformers import AutoModel
 
@@ -21,6 +21,7 @@ def get(
     make_copy: bool,
     override_weights_file: Optional[str] = None,
     override_weights_strip_prefix: Optional[str] = None,
+    from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
 ) -> transformers.PreTrainedModel:
     """
     Returns a transformer model from the cache.
@@ -39,6 +40,9 @@ def get(
         with `torch.save()`.
     override_weights_strip_prefix : `str`, optional
         If set, strip the given prefix from the state dict when loading it.
+    from_pretrained_kwargs : `dict`, optional (default=`None`)
+        Keyword arguments to pass into `transformers.AutoModel.from_pretrained`/
+        `transformers.AutoTokenizer.from_pretrained`
     """
     global _model_cache
     spec = TransformerSpec(model_name, override_weights_file, override_weights_strip_prefix)
@@ -74,9 +78,12 @@ def get(
                     )
                 override_weights = {strip_prefix(k): override_weights[k] for k in valid_keys}
 
-            transformer = AutoModel.from_pretrained(model_name, state_dict=override_weights)
+            transformer = AutoModel.from_pretrained(
+                model_name,
+                state_dict=override_weights,
+                **from_pretrained_kwargs)
         else:
-            transformer = AutoModel.from_pretrained(model_name)
+            transformer = AutoModel.from_pretrained(model_name, **from_pretrained_kwargs)
         _model_cache[spec] = transformer
     if make_copy:
         import copy

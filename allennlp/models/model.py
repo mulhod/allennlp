@@ -7,7 +7,7 @@ import logging
 import os
 from os import PathLike
 import re
-from typing import Dict, List, Set, Type, Optional, Union
+from typing import Dict, List, Set, Type, Optional, Union, Any
 
 import numpy
 import torch
@@ -269,6 +269,7 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
+        from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -293,7 +294,11 @@ class Model(torch.nn.Module, Registrable):
         # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab=vocab, params=model_params)
+        model = Model.from_params(
+            vocab=vocab,
+            params=model_params,
+            from_pretrained_kwargs=from_pretrained_kwargs,
+        )
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
@@ -350,6 +355,7 @@ class Model(torch.nn.Module, Registrable):
         serialization_dir: Union[str, PathLike],
         weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
+        from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -370,6 +376,9 @@ class Model(torch.nn.Module, Registrable):
         cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
+        from_pretrained_kwargs : `dict`, optional (default=`None`)
+            Keyword arguments to pass into `transformers.AutoModel.from_pretrained`/
+            `transformers.AutoTokenizer.from_pretrained`
 
         # Returns
 
@@ -393,7 +402,13 @@ class Model(torch.nn.Module, Registrable):
             # If we really need to change this, we would need to implement a recursive
             # get_model_class method, that recurses whenever it finds a from_archive model type.
             model_class = Model
-        return model_class._load(config, serialization_dir, weights_file, cuda_device)
+        return model_class._load(
+            config,
+            serialization_dir,
+            weights_file,
+            cuda_device,
+            from_pretrained_kwargs,
+        )
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
@@ -425,19 +440,24 @@ class Model(torch.nn.Module, Registrable):
                 )
 
     @classmethod
-    def from_archive(cls, archive_file: str, vocab: Vocabulary = None) -> "Model":
+    def from_archive(
+            cls,
+            archive_file: str,
+            vocab: Vocabulary = None,
+            from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> "Model":
         """
         Loads a model from an archive file.  This basically just calls
-        `return archival.load_archive(archive_file).model`.  It exists as a method here for
-        convenience, and so that we can register it for easy use for fine tuning an existing model
-        from a config file.
+        `return archival.load_archive(archive_file, from_pretrained_kwargs=from_pretrained_kwargs).model`.
+        It exists as a method here for convenience, and so that we can register it for easy
+        use for fine tuning an existing model from a config file.
 
         If `vocab` is given, we will extend the loaded model's vocabulary using the passed vocab
         object (including calling `extend_embedder_vocab`, which extends embedding layers).
         """
         from allennlp.models.archival import load_archive  # here to avoid circular imports
 
-        model = load_archive(archive_file).model
+        model = load_archive(archive_file, from_pretrained_kwargs=from_pretrained_kwargs).model
         if vocab:
             model.vocab.extend_from_vocab(vocab)
             model.extend_embedder_vocab()

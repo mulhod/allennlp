@@ -1,4 +1,4 @@
-from typing import List, Iterator, Dict, Tuple, Any, Type
+from typing import List, Iterator, Dict, Tuple, Any, Type, Optional
 import json
 import re
 from contextlib import contextmanager
@@ -238,6 +238,7 @@ class Predictor(Registrable):
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
         import_plugins: bool = True,
+        from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -265,6 +266,9 @@ class Predictor(Registrable):
             This comes with additional overhead, but means you don't need to explicitly
             import the modules that your predictor depends on as long as those modules
             can be found by `allennlp.common.plugins.import_plugins()`.
+        from_pretrained_kwargs : `dict`, optional (default=`None`)
+            Keyword arguments to pass into `transformers.AutoModel.from_pretrained`/
+            `transformers.AutoTokenizer.from_pretrained`
 
         # Returns
 
@@ -274,7 +278,11 @@ class Predictor(Registrable):
         if import_plugins:
             plugins.import_plugins()
         return Predictor.from_archive(
-            load_archive(archive_path, cuda_device=cuda_device),
+            load_archive(
+                archive_path,
+                cuda_device=cuda_device,
+                from_pretrained_kwargs=from_pretrained_kwargs
+            ),
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
             frozen=frozen,
