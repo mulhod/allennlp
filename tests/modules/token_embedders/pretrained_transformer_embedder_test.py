@@ -250,7 +250,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             with pytest.raises(ValueError) as execinfo:
                 PretrainedTransformerEmbedder(
                     "bert-base-uncased",
-                    from_pretrained_kwargs={
+                    transformers_from_pretrained_kwargs={
                         "cache_dir": tempdir,
                         "local_files_only": True,
                     },

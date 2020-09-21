@@ -2,12 +2,13 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
-from typing import NamedTuple, Union, Optional, Dict, Any
+from typing import NamedTuple, Union
 import logging
 import os
 import tempfile
 import tarfile
 import shutil
+from pathlib import Path
 
 from torch.nn import Module
 
@@ -129,18 +130,17 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: str,
+    archive_file: Union[str, Path],
     cuda_device: int = -1,
     overrides: str = "",
     weights_file: str = None,
-    from_pretrained_kwargs: Optional[Dict[str, Any]] = None,
 ) -> Archive:
     """
     Instantiates an Archive from an archived `tar.gz` file.
 
     # Parameters
 
-    archive_file : `str`
+    archive_file : `str`/`Path`
         The archive file to load the model from.
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
@@ -149,9 +149,6 @@ def load_archive(
         JSON overrides to apply to the unarchived `Params` object.
     weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
-    from_pretrained_kwargs : `dict`, optional (default=`None`)
-        Keyword arguments to pass into `transformers.AutoModel.from_pretrained`/
-        `transformers.AutoTokenizer.from_pretrained`
     """
     # redirect to the cache, if necessary
     resolved_archive_file = cached_path(archive_file)
@@ -190,7 +187,6 @@ def load_archive(
             weights_file=weights_path,
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
-            from_pretrained_kwargs=from_pretrained_kwargs,
         )
 
     finally:
